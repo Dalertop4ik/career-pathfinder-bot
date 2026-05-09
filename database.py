@@ -23,3 +23,4 @@ class Database:
     def get_recommedations(self, interest):
         self.cursor.execute("SELECT title, description FROM professions WHERE category = ?", (interest,))
         return self.cursor.fetchall()
+    
