@@ -8,40 +8,18 @@ class Database:
 
     def create_tables(self):
         # Таблица пользователей
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY, 
-                name TEXT, 
-                age INTEGER, 
-                interest TEXT
-            )
-        ''')
-        
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS users
+                            (id INTEGER PRIMARY KEY, name TEXT, age INTEGER, result TEXT)''')
         # Таблица профессий
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS professions (
-                id INTEGER PRIMARY KEY, 
-                title TEXT, 
-                description TEXT, 
-                category TEXT
-            )
-        ''')
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS professions
+                            (id TEXT PRIMARY KEY, title TEXT, description TEXT, skills TEXT)''')
         self.conn.commit()
 
-    def add_user(self, user_id, name, age, interest):
-        # Приводим к строке на случай, если прилетит список
-        str_interest = str(interest)
-        self.cursor.execute(
-            "INSERT OR REPLACE INTO users (id, name, age, interest) VALUES (?, ?, ?, ?)",
-            (user_id, name, age, str_interest)
-        )
+    def add_user(self, user_id, name, age, result):
+        self.cursor.execute("INSERT OR REPLACE INTO users (id, name, age, result) VALUES (?, ?, ?, ?)",
+                            (user_id, name, age, result))
         self.conn.commit()
 
-    def get_recommendations(self, interest):
-        # Если прилетел список, берем нужный элемент, иначе саму строку
-        category = interest[1] if isinstance(interest, list) else interest
-        self.cursor.execute(
-            "SELECT title, description FROM professions WHERE category = ?", 
-            (category,)
-        )
-        return self.cursor.fetchall()
+    def get_profession(self, prof_id):
+        self.cursor.execute("SELECT title, description, skills FROM professions WHERE id = ?", (prof_id,))
+        return self.cursor.fetchone()
