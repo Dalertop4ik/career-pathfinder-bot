@@ -24,8 +24,10 @@ class Quiz(StatesGroup):
 async def cmd_start(message: types.Message):
     kb = ReplyKeyboardBuilder()
     kb.button(text="🚀 Пройти тест")
-    await message.answer("Привет! Я помогу тебе выбрать профессию. Начнем опрос?", 
-                         reply_markup=kb.as_markup(resize_keyboard=True))
+    await message.answer(
+        "Привет! Я помогу тебе выбрать профессию. Начнем опрос?", 
+        reply_markup=kb.as_markup(resize_keyboard=True)
+    )
 
 @dp.message(F.text == "🚀 Пройти тест")
 async def start_quiz(message: types.Message, state: FSMContext):
