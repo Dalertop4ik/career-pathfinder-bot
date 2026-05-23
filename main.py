@@ -155,35 +155,57 @@ async def process_question(callback: types.CallbackQuery, state: FSMContext):
         
         await callback.message.edit_text(q["text"], reply_markup=kb.as_markup())
     else:
-        # Вопросы закончились! Ищем профессию с максимальным количеством баллов
+        # Вопросы закончились! 
         if not scores:
             await callback.message.edit_text("Не удалось определить результаты. Попробуйте пройти тест снова!")
             await state.clear()
             return
 
-        winner_prof = max(scores, key=scores.get)
+        # 1. Находим максимальный набранный балл
+        max_score = max(scores.values())
         
-        # Запрашиваем информацию из обновленной базы данных
-        prof_data = db.get_profession(winner_prof)
+        # 2. Собираем список ВСЕХ профессий, у которых балл равен максимальному
+        winner_profs = [prof for prof, score in scores.items() if score == max_score]
         
-        if prof_data:
-            title, desc, skills = prof_data
+        if len(winner_profs) == 1:
+            # Обычный сценарий: есть один явный победитель
+            winner_prof = winner_profs[0]
+            prof_data = db.get_profession(winner_prof)
+            
+            if prof_data:
+                title, desc, skills = prof_data
+                text = (
+                    f"🎯 <b>{data.get('name', 'Пользователь')}, твой тест успешно завершен!</b>\n\n"
+                    f"💻 <b>Твоя идеальная сфера:</b> {title}\n\n"
+                    f"📋 <b>Описание направления:</b>\n{desc}\n\n"
+                    f"🛠 <b>Ключевые навыки для старта:</b>\n<i>{skills}</i>"
+                )
+                db.add_user(callback.from_user.id, data.get('name', 'Неизвестно'), data.get('age', 0), winner_prof)
+            else:
+                text = "❌ Ошибка: Направление не найдено в базе данных."
+                
+        else:
+            # Сценарий ничьей: пользователь выбрал несколько направлений поровну
             text = (
                 f"🎯 <b>{data.get('name', 'Пользователь')}, твой тест успешно завершен!</b>\n\n"
-                f"💻 <b>Твоя идеальная сфера:</b> {title}\n\n"
-                f"📋 <b>Описание направления:</b>\n{desc}\n\n"
-                f"🛠 <b>Ключевые навыки для старта:</b>\n<i>{skills}</i>"
+                f"У тебя очень разносторонние интересы! Тебе одинаково хорошо подходят сразу несколько направлений:\n\n"
             )
-        else:
-            text = "❌ Ошибка: Направление не найдено в базе данных. Проверь, запущен ли файл init_db.py!"
             
+            # Собираем описания для каждой победившей профессии
+            for prof in winner_profs:
+                prof_data = db.get_profession(prof)
+                if prof_data:
+                    title, desc, _ = prof_data # Навыки тут можно опустить, чтобы не перегружать текст
+                    text += f"🔹 <b>{title}</b>\n<i>{desc}</i>\n\n"
+            
+            text += "💡 <b>Совет:</b> Обрати внимание на профессии на стыке этих сфер (например, IT-медицина или продуктовый дизайн)!"
+            
+            # Сохраняем в БД победителей через запятую (например, "python_dev,marketer")
+            combined_profs = ",".join(winner_profs)
+            db.add_user(callback.from_user.id, data.get('name', 'Неизвестно'), data.get('age', 0), combined_profs)
+
         await callback.message.edit_text(text, parse_mode="HTML")
-        
-        # Записываем данные финалиста в базу данных
-        db.add_user(callback.from_user.id, data.get('name', 'Неизвестно'), data.get('age', 0), winner_prof)
         await state.clear()
-        
-    await callback.answer()
 
 async def main():
     print("Бот запущен и готов к тестам!")
@@ -191,5 +213,6 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+        
         
         
